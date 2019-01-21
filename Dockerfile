@@ -9,4 +9,4 @@ LABEL "com.github.actions.color"="green"
 RUN apk add --no-cache bash ca-certificates curl jq
 
 COPY github-highfive /usr/bin/github-highfive
-CMD ["github-high-five"]
+CMD ["github-highfive"]
