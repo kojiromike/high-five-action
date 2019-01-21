@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# POST /repos/:owner/:repo/commits/:sha/comments
+
 set -ex
 
 : "${GITHUB_TOKEN?}"
@@ -11,19 +13,22 @@ API_VERSION=3
 API_HEADER="Accept: application/vnd.github.${API_VERSION}+json"
 AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
 
+q() {
+  jq --raw-output "$1" "$GITHUB_EVENT_PATH"
+}
+
 main() {
-  local action merged owner repo body number
+  local body full_name sha
   body='{"body": "High five!"}'
-  action=$(jq -r .action "$GITHUB_EVENT_PATH")
-  merged=$(jq --raw-output .pull_request.merged "$GITHUB_EVENT_PATH")
-  echo "DEBUG -> action: $action merged: $merged"
-  [[ "$action" = closed ]] || return 0
-  [[ "$merged" = true ]] || return 0
-  number=$(jq --raw-output .pull_request.head.number "$GITHUB_EVENT_PATH")
-  owner=$(jq --raw-output .pull_request.head.repo.owner.login "$GITHUB_EVENT_PATH")
-  repo=$(jq --raw-output .pull_request.head.repo.name "$GITHUB_EVENT_PATH")
-  echo "High fiving the pr"
-  curl -sSL -H "$AUTH_HEADER" -H "$API_HEADER" "$URI/repos/$owner/$repo/issues/$number/comments" --data "$body"
+  full_name=$(q .repository.full_name)
+  sha=$(q .after)
+  if [[ ! "$sha" ]]; then
+    sha=$(q .head)
+  fi
+  echo "High fiving the push"
+  curl -sSL -H "$AUTH_HEADER" -H "$API_HEADER" \
+    --data "$body" \
+    "$URI/repos/$full_name/commits/$sha/comments"
 }
 
 main "$@"
